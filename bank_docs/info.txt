@@ -1,0 +1,12 @@
+Bank Name: ABC Bank
+
+Accounts:
+Savings Account - 4% interest rate, minimum balance 1000
+Current Account - No interest, minimum balance 5000
+
+Loans:
+Home Loan - 8% interest
+Personal Loan - 12% interest
+
+Services:
+ATM, Net Banking, Mobile Banking
