@@ -36,10 +36,19 @@ def build_index(folder_path):
     return index, docs
 
 
-def search(query, index, docs, k=2):  # ✅ reduced results
+def search(query, index, docs, k=2):
     query_vector = model.encode([query])
-    _, indices = index.search(np.array(query_vector), k)
-    return [docs[i] for i in indices[0]]
+    distances, indices = index.search(np.array(query_vector), k)
+
+    # ✅ Take best match
+    best_distance = distances[0][0]
+    best_doc = docs[indices[0][0]]
+
+    # ✅ Threshold (tune this if needed)
+    if best_distance > 1.0:
+        return None
+
+    return best_doc
 
 
 st.title("🏦 Bank Bot")
