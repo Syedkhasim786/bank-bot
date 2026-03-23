@@ -13,7 +13,7 @@ def load_documents(folder_path):
             with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
                 text = f.read()
 
-                # ✅ FIXED: better chunking (instead of line split)
+                # ✅ FIXED: better chunking
                 chunks = text.split("\n\n")
 
                 for chunk in chunks:
@@ -46,7 +46,6 @@ def search(query, index, docs, k=2):
     best_distance = distances[0][0]
     best_doc = docs[indices[0][0]]
 
-    # ✅ Slightly flexible threshold
     if best_distance > 1.2:
         return None
 
@@ -66,20 +65,19 @@ if query:
 
     st.write("🤖 Bot:")
 
-    # ✅ FIXED: result is string, not list
     if result:
-    st.success("Here are the details:")
+        st.success("Here are the details:")
 
-    # ✅ Split and display nicely
-    parts = result.split(":")
+        # ✅ Proper indentation fixed
+        parts = result.split(":")
 
-    if len(parts) > 1:
-        items = parts[1].split()
+        if len(parts) > 1:
+            items = parts[1].split()
 
-        for item in items:
-            if "Account" in item:
-                st.write("•", item)
+            for item in items:
+                if "Account" in item:
+                    st.write("•", item)
+        else:
+            st.write(result)
     else:
-        st.write(result)
-else:
-    st.warning("Please ask a more specific question.")
+        st.warning("Please ask a more specific question.")
