@@ -68,6 +68,16 @@ if query:
 
     # ✅ FIXED: result is string, not list
     if result:
-        st.success(result)
+    st.success("Here are the details:")
+
+    # ✅ Split and display line by line
+    parts = result.split(":")
+
+    if len(parts) > 1:
+        items = parts[1].split()
+
+        for item in items:
+            if "Account" in item:
+                st.write("•", item)
     else:
-        st.warning("Please ask a more specific question.")
+        st.write(result)
