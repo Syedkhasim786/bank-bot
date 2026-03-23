@@ -70,7 +70,7 @@ if query:
     if result:
     st.success("Here are the details:")
 
-    # ✅ Split and display line by line
+    # ✅ Split and display nicely
     parts = result.split(":")
 
     if len(parts) > 1:
@@ -81,3 +81,5 @@ if query:
                 st.write("•", item)
     else:
         st.write(result)
+else:
+    st.warning("Please ask a more specific question.")
