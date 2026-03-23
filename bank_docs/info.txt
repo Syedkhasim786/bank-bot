@@ -6,6 +6,7 @@ Current Account
 
 minimum balance -15000
 
+Intrest rate :
 Intrest rate for Savings Account-4%
 Intrest rate for Current Account -6%
 
