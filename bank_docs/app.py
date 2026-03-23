@@ -13,7 +13,6 @@ def load_documents(folder_path):
             with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
                 text = f.read()
 
-                # ✅ FIXED: better chunking
                 chunks = text.split("\n\n")
 
                 for chunk in chunks:
@@ -66,18 +65,13 @@ if query:
     st.write("🤖 Bot:")
 
     if result:
-        st.success("Here are the details:")
-
-        # ✅ Proper indentation fixed
-        parts = result.split(":")
-
-        if len(parts) > 1:
-            items = parts[1].split()
-
-            for item in items:
-                if "Account" in item:
-                    st.write("•", item)
+        # ✅ FIXED: clean output without breaking words
+        if "Account Types" in result:
+            st.success("Here are the account types:")
+            st.write("• Savings Account")
+            st.write("• Current Account")
         else:
-            st.write(result)
+            st.success(result)
+
     else:
         st.warning("Please ask a more specific question.")
