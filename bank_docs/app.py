@@ -65,13 +65,30 @@ if query:
     st.write("🤖 Bot:")
 
     if result:
-        # ✅ FIXED: clean output without breaking words
-        if "Account Types" in result:
-            st.success("Here are the account types:")
-            st.write("• Savings Account")
-            st.write("• Current Account")
-        else:
-            st.success(result)
+    query_lower = query.lower()
+
+    # ✅ Filter specific account
+    if "savings" in query_lower:
+        for line in result.split("\n"):
+            if "Savings" in line:
+                st.success(line)
+                break
+
+    elif "current" in query_lower:
+        for line in result.split("\n"):
+            if "Current" in line:
+                st.success(line)
+                break
+
+    # ✅ Handle account types separately
+    elif "account types" in query_lower:
+        st.success("Here are the account types:")
+        st.write("• Savings Account")
+        st.write("• Current Account")
+
+    # ✅ Default
+    else:
+        st.success(result)
 
     else:
         st.warning("Please ask a more specific question.")
