@@ -11,8 +11,15 @@ def load_documents(folder_path):
     for file in os.listdir(folder_path):
         if file.endswith(".txt"):
             with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
-                docs.append(f.read())
+                text = f.read()
+
+                # ✅ Split into smaller chunks (IMPORTANT FIX)
+                for chunk in text.split("\n\n"):
+                    if chunk.strip():
+                        docs.append(chunk.strip())
+
     return docs
+
 
 def build_index(folder_path):
     docs = load_documents(folder_path)
@@ -28,10 +35,12 @@ def build_index(folder_path):
 
     return index, docs
 
-def search(query, index, docs, k=3):
+
+def search(query, index, docs, k=2):  # ✅ reduced results
     query_vector = model.encode([query])
     _, indices = index.search(np.array(query_vector), k)
     return [docs[i] for i in indices[0]]
+
 
 st.title("🏦 Bank Bot")
 
@@ -45,5 +54,7 @@ if query:
     results = search(query, index, docs)
 
     st.write("🤖 Bot:")
-    for r in results:
-        st.write("-", r)
+
+    # ✅ Show only best answer instead of all
+    if results:
+        st.success(results[0])   # best match only
