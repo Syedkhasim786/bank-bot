@@ -6,7 +6,6 @@ from sentence_transformers import SentenceTransformer
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-
 def load_documents(folder_path):
     docs = []
     for file in os.listdir(folder_path):
@@ -14,14 +13,13 @@ def load_documents(folder_path):
             with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
                 text = f.read()
 
-                # ✅ Smart splitting (KEEP ONLY THIS)
-                lines = text.split("\n")
+                # ✅ FIXED: better chunking (instead of line split)
+                chunks = text.split("\n\n")
 
-                for line in lines:
-                    line = line.strip()
-
-                    if line and not line.endswith(":"):
-                        docs.append(line)
+                for chunk in chunks:
+                    chunk = chunk.strip()
+                    if chunk:
+                        docs.append(chunk)
 
     return docs
 
@@ -68,7 +66,7 @@ if query:
 
     st.write("🤖 Bot:")
 
-    # ✅ FIXED OUTPUT
+    # ✅ FIXED: result is string, not list
     if result:
         st.success(result)
     else:
