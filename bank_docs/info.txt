@@ -1,8 +1,13 @@
-Bank Name: ABC Bank
+Bank Name: Vcube Bank
 
-Accounts:
-Savings Account - 4% interest rate, minimum balance 1000
-Current Account - No interest, minimum balance 5000
+Account Types:
+Savings Account 
+Current Account 
+
+minimum balance -15000
+
+Intrest rate for Savings Account-4%
+Intrest rate for Current Account -6%
 
 Loans:
 Home Loan - 8% interest
