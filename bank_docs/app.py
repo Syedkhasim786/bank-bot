@@ -67,10 +67,17 @@ if query:
     if result:
         query_lower = query.lower()
 
-        # ✅ Home loan filter (ADDED)
+        # ✅ Home loan
         if "home" in query_lower and "loan" in query_lower:
             for line in result.split("\n"):
                 if "Home Loan" in line:
+                    st.success(line)
+                    break
+
+        # ✅ Personal loan (ADDED)
+        elif "personal" in query_lower and "loan" in query_lower:
+            for line in result.split("\n"):
+                if "Personal Loan" in line:
                     st.success(line)
                     break
 
