@@ -53,6 +53,9 @@ def search(query, index, docs, k=2):
 
 st.title("🏦 Bank Bot")
 
+# ✅ Greeting message (ADDED)
+st.write("👋 Hey there! How can I help you today?")
+
 folder_path = "bank_docs"
 
 index, docs = build_index(folder_path)
@@ -67,41 +70,35 @@ if query:
     if result:
         query_lower = query.lower()
 
-        # ✅ Home loan
         if "home" in query_lower and "loan" in query_lower:
             for line in result.split("\n"):
                 if "Home Loan" in line:
                     st.success(line)
                     break
 
-        # ✅ Personal loan (ADDED)
         elif "personal" in query_lower and "loan" in query_lower:
             for line in result.split("\n"):
                 if "Personal Loan" in line:
                     st.success(line)
                     break
 
-        # ✅ Savings
         elif "savings" in query_lower:
             for line in result.split("\n"):
                 if "Savings" in line:
                     st.success(line)
                     break
 
-        # ✅ Current
         elif "current" in query_lower:
             for line in result.split("\n"):
                 if "Current" in line:
                     st.success(line)
                     break
 
-        # ✅ Account types
         elif "account types" in query_lower:
             st.success("Here are the account types:")
             st.write("• Savings Account")
             st.write("• Current Account")
 
-        # ✅ Default
         else:
             st.success(result)
 
