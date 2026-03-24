@@ -1,13 +1,25 @@
 # -------------------------------
-# Chat input
+# Chat / Text input (compatible)
 # -------------------------------
-query = st.chat_input("Ask about bank")
+try:
+    # Try to use chat_input if available (Streamlit >=1.24)
+    query = st.chat_input("Ask about bank")
+    use_chat = True
+except AttributeError:
+    # Fallback to text_input for older Streamlit
+    query = st.text_input("Ask about bank")
+    use_chat = False
 
 if query:
+    # Save user message to session
     st.session_state.messages.append({"role": "user", "content": query})
 
-    with st.chat_message("user"):
-        st.write(query)
+    # Display user message
+    if use_chat:
+        with st.chat_message("user"):
+            st.write(query)
+    else:
+        st.markdown(f"**You:** {query}")
 
     query_lower = query.lower()
 
@@ -15,7 +27,6 @@ if query:
     # EMI detection (show only if user asks)
     # -------------------------------
     if "emi" in query_lower:
-        # Option 1: automatic calculation from numbers in query
         import re
         numbers = re.findall(r"\d+", query)
 
@@ -28,7 +39,7 @@ if query:
             response = f"💰 Your EMI is ₹{emi}"
 
         else:
-            # Option 2: show input fields if user didn't provide numbers
+            # Show input fields dynamically
             st.subheader("💰 EMI Calculator")
             col1, col2, col3 = st.columns(3)
 
@@ -63,7 +74,11 @@ if query:
             response = "Please ask a more specific question."
 
     # Show bot message
-    with st.chat_message("assistant"):
-        st.write(response)
+    if use_chat:
+        with st.chat_message("assistant"):
+            st.write(response)
+    else:
+        st.markdown(f"**Bot:** {response}")
 
+    # Save bot response to session
     st.session_state.messages.append({"role": "assistant", "content": response})
