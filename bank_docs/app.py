@@ -67,20 +67,28 @@ if query:
     if result:
         query_lower = query.lower()
 
-        # ✅ Filter specific account
-        if "savings" in query_lower:
+        # ✅ Home loan filter (ADDED)
+        if "home" in query_lower and "loan" in query_lower:
+            for line in result.split("\n"):
+                if "Home Loan" in line:
+                    st.success(line)
+                    break
+
+        # ✅ Savings
+        elif "savings" in query_lower:
             for line in result.split("\n"):
                 if "Savings" in line:
                     st.success(line)
                     break
 
+        # ✅ Current
         elif "current" in query_lower:
             for line in result.split("\n"):
                 if "Current" in line:
                     st.success(line)
                     break
 
-        # ✅ Handle account types separately
+        # ✅ Account types
         elif "account types" in query_lower:
             st.success("Here are the account types:")
             st.write("• Savings Account")
