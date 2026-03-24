@@ -2,9 +2,18 @@ import streamlit as st
 import os
 import faiss
 import numpy as np
+import re
 from sentence_transformers import SentenceTransformer
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
+
+# -------------------------------
+# EMI Function (ADDED)
+# -------------------------------
+def calculate_emi(P, annual_rate, months):
+    r = annual_rate / (12 * 100)
+    emi = (P * r * (1 + r)**months) / ((1 + r)**months - 1)
+    return round(emi, 2)
 
 # -------------------------------
 # Load docs
@@ -62,6 +71,25 @@ def search(query, index, docs, k=2):
 # -------------------------------
 st.title("🏦 Bank Bot")
 
+# ✅ EMI Calculator UI (ADDED)
+st.subheader("💰 EMI Calculator")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    amount = st.number_input("Loan Amount", value=500000)
+
+with col2:
+    rate = st.number_input("Interest Rate (%)", value=8.0)
+
+with col3:
+    months = st.number_input("Tenure (Months)", value=60)
+
+if st.button("Calculate EMI"):
+    emi = calculate_emi(amount, rate, months)
+    st.success(f"Your EMI is ₹{emi}")
+
+
 folder_path = "bank_docs"
 index, docs = build_index(folder_path)
 
@@ -80,32 +108,47 @@ for msg in st.session_state.messages:
 query = st.chat_input("Ask about bank")
 
 if query:
-    # Show user message
     st.session_state.messages.append({"role": "user", "content": query})
 
     with st.chat_message("user"):
         st.write(query)
 
-    # Get result
-    result = search(query, index, docs)
+    query_lower = query.lower()
 
-    if result:
-        query_lower = query.lower()
+    # -------------------------------
+    # ✅ EMI CHAT DETECTION (ADDED)
+    # -------------------------------
+    if "emi" in query_lower:
+        numbers = re.findall(r"\d+", query)
 
-        if "home" in query_lower and "loan" in query_lower:
-            response = next((line for line in result.split("\n") if "Home Loan" in line), result)
+        if len(numbers) >= 3:
+            P = int(numbers[0])
+            rate = float(numbers[1])
+            months = int(numbers[2])
 
-        elif "personal" in query_lower and "loan" in query_lower:
-            response = next((line for line in result.split("\n") if "Personal Loan" in line), result)
-
+            emi = calculate_emi(P, rate, months)
+            response = f"💰 Your EMI is ₹{emi}"
         else:
-            response = result
+            response = "Please provide: amount rate months (e.g., 500000 8 60)"
+
     else:
-        response = "Please ask a more specific question."
+        # Normal search
+        result = search(query, index, docs)
+
+        if result:
+            if "home" in query_lower and "loan" in query_lower:
+                response = next((line for line in result.split("\n") if "Home Loan" in line), result)
+
+            elif "personal" in query_lower and "loan" in query_lower:
+                response = next((line for line in result.split("\n") if "Personal Loan" in line), result)
+
+            else:
+                response = result
+        else:
+            response = "Please ask a more specific question."
 
     # Show bot message
     with st.chat_message("assistant"):
         st.write(response)
 
-    # Save bot response
     st.session_state.messages.append({"role": "assistant", "content": response})
