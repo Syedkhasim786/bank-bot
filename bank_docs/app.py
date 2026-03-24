@@ -1,114 +1,10 @@
-import streamlit as st
-import os
-import faiss
-import numpy as np
-import re
-from sentence_transformers import SentenceTransformer
-
-model = SentenceTransformer("all-MiniLM-L6-v2")
-
 # -------------------------------
-# EMI Function (ADDED)
+# Chat input
 # -------------------------------
-def calculate_emi(P, annual_rate, months):
-    r = annual_rate / (12 * 100)
-    emi = (P * r * (1 + r)**months) / ((1 + r)**months - 1)
-    return round(emi, 2)
-
-# -------------------------------
-# Load docs
-# -------------------------------
-def load_documents(folder_path):
-    docs = []
-    for file in os.listdir(folder_path):
-        if file.endswith(".txt"):
-            with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
-                text = f.read()
-                chunks = text.split("\n\n")
-
-                for chunk in chunks:
-                    chunk = chunk.strip()
-                    if chunk:
-                        docs.append(chunk)
-    return docs
-
-
-# -------------------------------
-# Build index
-# -------------------------------
-def build_index(folder_path):
-    docs = load_documents(folder_path)
-
-    if len(docs) == 0:
-        st.error("No documents found")
-        st.stop()
-
-    embeddings = model.encode(docs)
-    index = faiss.IndexFlatL2(embeddings.shape[1])
-    index.add(np.array(embeddings))
-
-    return index, docs
-
-
-# -------------------------------
-# Search
-# -------------------------------
-def search(query, index, docs, k=2):
-    query_vector = model.encode([query])
-    distances, indices = index.search(np.array(query_vector), k)
-
-    best_distance = distances[0][0]
-    best_doc = docs[indices[0][0]]
-
-    if best_distance > 1.2:
-        return None
-
-    return best_doc
-
-
-# -------------------------------
-# UI
-# -------------------------------
-st.title("🏦 Bank Bot")
-
-# ✅ EMI Calculator UI (ADDED)
-st.subheader("💰 EMI Calculator")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    amount = st.number_input("Loan Amount", value=500000)
-
-with col2:
-    rate = st.number_input("Interest Rate (%)", value=8.0)
-
-with col3:
-    months = st.number_input("Tenure (Months)", value=60)
-
-if st.button("Calculate EMI"):
-    emi = calculate_emi(amount, rate, months)
-    st.success(f"Your EMI is ₹{emi}")
-
-
-folder_path = "bank_docs"
-index, docs = build_index(folder_path)
-
-# ✅ Initialize chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "👋 Hey there! How can I help you today?"}
-    ]
-
-# ✅ Display chat history
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.write(msg["content"])
-
-# ✅ Chat input
 query = st.chat_input("Ask about bank")
 
 if query:
-    st.session_state.messages.append({"role": "user", "content": query})
+    st.session_state.messages.append({"role": "user", "content": query"})
 
     with st.chat_message("user"):
         st.write(query)
@@ -116,9 +12,11 @@ if query:
     query_lower = query.lower()
 
     # -------------------------------
-    # ✅ EMI CHAT DETECTION (ADDED)
+    # EMI detection (show only if user asks)
     # -------------------------------
     if "emi" in query_lower:
+        # Option 1: automatic calculation from numbers in query
+        import re
         numbers = re.findall(r"\d+", query)
 
         if len(numbers) >= 3:
@@ -128,13 +26,30 @@ if query:
 
             emi = calculate_emi(P, rate, months)
             response = f"💰 Your EMI is ₹{emi}"
+
         else:
-            response = "Please provide: amount rate months (e.g., 500000 8 60)"
+            # Option 2: show input fields if user didn't provide numbers
+            st.subheader("💰 EMI Calculator")
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                amount = st.number_input("Loan Amount", value=500000, key="emi_amount")
+
+            with col2:
+                rate = st.number_input("Interest Rate (%)", value=8.0, key="emi_rate")
+
+            with col3:
+                months = st.number_input("Tenure (Months)", value=60, key="emi_months")
+
+            if st.button("Calculate EMI", key="emi_calc_btn"):
+                emi = calculate_emi(amount, rate, months)
+                response = f"💰 Your EMI is ₹{emi}"
+            else:
+                response = "Please enter loan details to calculate EMI."
 
     else:
-        # Normal search
+        # Normal bank search
         result = search(query, index, docs)
-
         if result:
             if "home" in query_lower and "loan" in query_lower:
                 response = next((line for line in result.split("\n") if "Home Loan" in line), result)
