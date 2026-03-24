@@ -6,23 +6,27 @@ from sentence_transformers import SentenceTransformer
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
+# -------------------------------
+# Load docs
+# -------------------------------
 def load_documents(folder_path):
     docs = []
     for file in os.listdir(folder_path):
         if file.endswith(".txt"):
             with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
                 text = f.read()
-
                 chunks = text.split("\n\n")
 
                 for chunk in chunks:
                     chunk = chunk.strip()
                     if chunk:
                         docs.append(chunk)
-
     return docs
 
 
+# -------------------------------
+# Build index
+# -------------------------------
 def build_index(folder_path):
     docs = load_documents(folder_path)
 
@@ -31,13 +35,15 @@ def build_index(folder_path):
         st.stop()
 
     embeddings = model.encode(docs)
-
     index = faiss.IndexFlatL2(embeddings.shape[1])
     index.add(np.array(embeddings))
 
     return index, docs
 
 
+# -------------------------------
+# Search
+# -------------------------------
 def search(query, index, docs, k=2):
     query_vector = model.encode([query])
     distances, indices = index.search(np.array(query_vector), k)
@@ -51,56 +57,55 @@ def search(query, index, docs, k=2):
     return best_doc
 
 
+# -------------------------------
+# UI
+# -------------------------------
 st.title("🏦 Bank Bot")
 
-# ✅ Greeting message (ADDED)
-st.write("👋 Hey there! How can I help you today?")
-
 folder_path = "bank_docs"
-
 index, docs = build_index(folder_path)
 
-query = st.text_input("Ask about bank")
+# ✅ Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "👋 Hey there! How can I help you today?"}
+    ]
+
+# ✅ Display chat history
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.write(msg["content"])
+
+# ✅ Chat input
+query = st.chat_input("Ask about bank")
 
 if query:
-    result = search(query, index, docs)
+    # Show user message
+    st.session_state.messages.append({"role": "user", "content": query})
 
-    st.write("🤖 Bot:")
+    with st.chat_message("user"):
+        st.write(query)
+
+    # Get result
+    result = search(query, index, docs)
 
     if result:
         query_lower = query.lower()
 
         if "home" in query_lower and "loan" in query_lower:
-            for line in result.split("\n"):
-                if "Home Loan" in line:
-                    st.success(line)
-                    break
+            response = next((line for line in result.split("\n") if "Home Loan" in line), result)
 
         elif "personal" in query_lower and "loan" in query_lower:
-            for line in result.split("\n"):
-                if "Personal Loan" in line:
-                    st.success(line)
-                    break
-
-        elif "savings" in query_lower:
-            for line in result.split("\n"):
-                if "Savings" in line:
-                    st.success(line)
-                    break
-
-        elif "current" in query_lower:
-            for line in result.split("\n"):
-                if "Current" in line:
-                    st.success(line)
-                    break
-
-        elif "account types" in query_lower:
-            st.success("Here are the account types:")
-            st.write("• Savings Account")
-            st.write("• Current Account")
+            response = next((line for line in result.split("\n") if "Personal Loan" in line), result)
 
         else:
-            st.success(result)
-
+            response = result
     else:
-        st.warning("Please ask a more specific question.")
+        response = "Please ask a more specific question."
+
+    # Show bot message
+    with st.chat_message("assistant"):
+        st.write(response)
+
+    # Save bot response
+    st.session_state.messages.append({"role": "assistant", "content": response})
