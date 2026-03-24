@@ -4,7 +4,7 @@
 query = st.chat_input("Ask about bank")
 
 if query:
-    st.session_state.messages.append({"role": "user", "content": query"})
+    st.session_state.messages.append({"role": "user", "content": query})
 
     with st.chat_message("user"):
         st.write(query)
