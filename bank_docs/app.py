@@ -76,9 +76,33 @@ for msg in st.session_state.messages:
     st.markdown(f"**{role}:** {msg['content']}")
 
 # -------------------------------
-# User input (compatible with all Streamlit)
+# ⚡ Quick Action Buttons (ADDED)
 # -------------------------------
-query = st.text_input("Ask about bank")
+st.markdown("### ⚡ Quick Actions")
+
+col1, col2, col3 = st.columns(3)
+
+quick_query = None
+
+with col1:
+    if st.button("💰 Check EMI"):
+        quick_query = "calculate emi"
+
+with col2:
+    if st.button("🏦 Loan Info"):
+        quick_query = "loan information"
+
+with col3:
+    if st.button("💳 Account Types"):
+        quick_query = "account types"
+
+# -------------------------------
+# User input
+# -------------------------------
+query_input = st.text_input("Ask about bank")
+
+# Use button query if clicked
+query = quick_query if quick_query else query_input
 
 if query:
     # Save user message
@@ -121,6 +145,10 @@ if query:
                 response = next((line for line in result.split("\n") if "Home Loan" in line), result)
             elif "personal" in query_lower and "loan" in query_lower:
                 response = next((line for line in result.split("\n") if "Personal Loan" in line), result)
+            elif "account types" in query_lower:
+                response = "💳 Savings Account, Current Account"
+            elif "loan" in query_lower:
+                response = result
             else:
                 response = result
         else:
