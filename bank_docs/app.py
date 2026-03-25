@@ -76,7 +76,7 @@ for msg in st.session_state.messages:
     st.markdown(f"**{role}:** {msg['content']}")
 
 # -------------------------------
-# ⚡ Quick Actions (UPDATED)
+# ⚡ Quick Actions
 # -------------------------------
 st.markdown("### ⚡ Quick Actions")
 
@@ -106,7 +106,8 @@ col5, col6, col7 = st.columns(3)
 
 with col5:
     if st.button("💵 Balance"):
-        quick_query = "minimum balance"
+        st.session_state.show_balance_options = True
+        quick_query = None
 
 with col6:
     if st.button("📈 FD"):
@@ -115,6 +116,25 @@ with col6:
 with col7:
     if st.button("📊 Accounts"):
         quick_query = "account types"
+
+# -------------------------------
+# Balance Sub Buttons (NEW)
+# -------------------------------
+if "show_balance_options" not in st.session_state:
+    st.session_state.show_balance_options = False
+
+if st.session_state.show_balance_options:
+    st.markdown("### 💵 Select Account Type")
+
+    colA, colB = st.columns(2)
+
+    if colA.button("Savings Account"):
+        quick_query = "savings minimum balance"
+        st.session_state.show_balance_options = False
+
+    if colB.button("Current Account"):
+        quick_query = "current minimum balance"
+        st.session_state.show_balance_options = False
 
 # -------------------------------
 # User input
@@ -165,7 +185,13 @@ if query:
         result = search(query, index, docs)
 
         if result:
-            if "home" in query_lower and "loan" in query_lower:
+            if "savings" in query_lower and "balance" in query_lower:
+                response = "💰 Savings Account Minimum Balance: ₹1000"
+
+            elif "current" in query_lower and "balance" in query_lower:
+                response = "💰 Current Account Minimum Balance: ₹5000"
+
+            elif "home" in query_lower and "loan" in query_lower:
                 response = next((line for line in result.split("\n") if "Home Loan" in line), result)
 
             elif "personal" in query_lower and "loan" in query_lower:
@@ -178,7 +204,7 @@ if query:
                 response = "\n".join([line for line in result.split("\n") if "atm" in line.lower() or "transaction" in line.lower()])
 
             elif "minimum balance" in query_lower:
-                response = "\n".join([line for line in result.split("\n") if "balance" in line.lower()])
+                response = "👉 Please select Savings or Current account"
 
             elif "fd" in query_lower or "fixed deposit" in query_lower:
                 response = "\n".join([line for line in result.split("\n") if "year" in line.lower() or "interest" in line.lower()])
