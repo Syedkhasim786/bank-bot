@@ -76,24 +76,44 @@ for msg in st.session_state.messages:
     st.markdown(f"**{role}:** {msg['content']}")
 
 # -------------------------------
-# Quick Actions
+# ⚡ Quick Actions (UPDATED)
 # -------------------------------
 st.markdown("### ⚡ Quick Actions")
 
-col1, col2, col3 = st.columns(3)
-
 quick_query = None
 
+# Row 1
+col1, col2, col3, col4 = st.columns(4)
+
 with col1:
-    if st.button("💰 Check EMI"):
+    if st.button("💰 EMI"):
         quick_query = "calculate emi"
 
 with col2:
-    if st.button("🏦 Loan Info"):
+    if st.button("🏦 Loans"):
         quick_query = "loan information"
 
 with col3:
-    if st.button("💳 Account Types"):
+    if st.button("💳 Cards"):
+        quick_query = "credit card details"
+
+with col4:
+    if st.button("🏧 ATM"):
+        quick_query = "atm charges"
+
+# Row 2
+col5, col6, col7 = st.columns(3)
+
+with col5:
+    if st.button("💵 Balance"):
+        quick_query = "minimum balance"
+
+with col6:
+    if st.button("📈 FD"):
+        quick_query = "fd interest"
+
+with col7:
+    if st.button("📊 Accounts"):
         quick_query = "account types"
 
 # -------------------------------
@@ -152,16 +172,16 @@ if query:
                 response = next((line for line in result.split("\n") if "Personal Loan" in line), result)
 
             elif "credit" in query_lower:
-                response = next((line for line in result.split("\n") if "Credit Card" in line), result)
+                response = "\n".join([line for line in result.split("\n") if "credit" in line.lower()])
 
             elif "atm" in query_lower:
-                response = next((line for line in result.split("\n") if "ATM" in line), result)
+                response = "\n".join([line for line in result.split("\n") if "atm" in line.lower() or "transaction" in line.lower()])
 
             elif "minimum balance" in query_lower:
-                response = next((line for line in result.split("\n") if "Minimum balance" in line), result)
+                response = "\n".join([line for line in result.split("\n") if "balance" in line.lower()])
 
             elif "fd" in query_lower or "fixed deposit" in query_lower:
-                response = next((line for line in result.split("\n") if "year" in line or "FD" in line), result)
+                response = "\n".join([line for line in result.split("\n") if "year" in line.lower() or "interest" in line.lower()])
 
             elif "account types" in query_lower:
                 response = "💳 Savings Account, Current Account"
