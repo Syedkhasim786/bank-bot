@@ -2,22 +2,29 @@ Account Types:
 Savings Account - Minimum balance ₹1000
 Current Account - Minimum balance ₹5000
 
+
 Loans:
 Home Loan - 8% interest
 Personal Loan - 12% interest
 
-Credit Cards:
-Basic Credit Card - ₹500 annual fee, 1% cashback
-Premium Credit Card - ₹2000 annual fee, 5% cashback, airport lounge access
 
-ATM Charges:
-3 free transactions per month, ₹20 per extra transaction
+Credit Card:
+Basic Credit Card - ₹500 annual fee, 1% cashback
+Premium Credit Card - ₹2000 annual fee, 5% cashback
+Premium Credit Card - Airport lounge access
+
+
+ATM:
+3 free transactions per month
+₹20 per extra transaction
+
 
 Minimum Balance:
 Savings Account - ₹1000
 Current Account - ₹5000
 
-Fixed Deposits (FD):
+
+FD:
 1 year - 6% interest
 3 years - 7% interest
 5 years - 7.5% interest
