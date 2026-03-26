@@ -98,74 +98,70 @@ index, docs, metadata = build_index(folder_path)
 if "loan_step" not in st.session_state:
     st.session_state.loan_step = 0
 
-# Chat history
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "👋 Hey there! How can I help you today?"}
     ]
 
+# -------------------------------
+# Display chat
+# -------------------------------
 for msg in st.session_state.messages:
     role = "You" if msg["role"] == "user" else "Bot"
     st.markdown(f"**{role}:** {msg['content']}")
 
 # -------------------------------
-# Input
+# Input (IMPORTANT FIX)
 # -------------------------------
-query_input = st.text_input("Ask about bank")
-query = query_input
+query = st.text_input("Ask about bank", key="input_box")
 
-if query:
+if st.button("Send") and query:
+
     st.session_state.messages.append({"role": "user", "content": query})
     st.markdown(f"**You:** {query}")
 
     query_lower = query.lower()
+    response = ""
+    results = None
 
-    # -------------------------------
-    # 🔥 FIXED LOAN FLOW (PRIORITY)
-    # -------------------------------
-    if st.session_state.loan_step > 0 or "loan eligibility" in query_lower:
+    # ===============================
+    # 🔥 LOAN FLOW (FIXED)
+    # ===============================
+    if st.session_state.loan_step == 1:
+        try:
+            st.session_state.salary = int(query)
+            st.session_state.loan_step = 2
+            response = "Enter your age:"
+        except:
+            response = "❗ Enter valid salary"
 
-        if st.session_state.loan_step == 0:
-            st.session_state.loan_step = 1
-            response = "Enter your monthly salary:"
-            results = None
+    elif st.session_state.loan_step == 2:
+        try:
+            st.session_state.age = int(query)
+            st.session_state.loan_step = 3
+            response = "Enter your existing EMI (if none, type 0):"
+        except:
+            response = "❗ Enter valid age"
 
-        elif st.session_state.loan_step == 1:
-            try:
-                st.session_state.salary = int(query)
-                st.session_state.loan_step = 2
-                response = "Enter your age:"
-            except:
-                response = "❗ Please enter a valid salary (number only)"
-            results = None
+    elif st.session_state.loan_step == 3:
+        try:
+            emi = int(query)
+            response = check_loan_eligibility(
+                st.session_state.salary,
+                st.session_state.age,
+                emi
+            )
+            st.session_state.loan_step = 0
+        except:
+            response = "❗ Enter valid EMI"
 
-        elif st.session_state.loan_step == 2:
-            try:
-                st.session_state.age = int(query)
-                st.session_state.loan_step = 3
-                response = "Enter your existing EMI (if none, type 0):"
-            except:
-                response = "❗ Please enter a valid age"
-            results = None
+    elif "loan eligibility" in query_lower:
+        st.session_state.loan_step = 1
+        response = "Enter your monthly salary:"
 
-        elif st.session_state.loan_step == 3:
-            try:
-                existing_emi = int(query)
-
-                response = check_loan_eligibility(
-                    st.session_state.salary,
-                    st.session_state.age,
-                    existing_emi
-                )
-
-                st.session_state.loan_step = 0
-            except:
-                response = "❗ Please enter a valid EMI"
-            results = None
-
-    # -------------------------------
+    # ===============================
     # EMI
-    # -------------------------------
+    # ===============================
     elif "emi" in query_lower:
         numbers = re.findall(r"\d+", query)
 
@@ -174,14 +170,12 @@ if query:
             rate = float(numbers[1])
             months = int(numbers[2])
             response = f"💰 Your EMI is ₹{calculate_emi(P, rate, months)}"
-            results = None
         else:
-            response = "Please enter: amount rate months"
-            results = None
+            response = "👉 Enter like: 500000 8 60"
 
-    # -------------------------------
-    # Search
-    # -------------------------------
+    # ===============================
+    # SEARCH
+    # ===============================
     else:
         results = search(query, index, docs, metadata)
 
