@@ -16,6 +16,21 @@ def calculate_emi(P, annual_rate, months):
     return round(emi, 2)
 
 # -------------------------------
+# Loan Eligibility Function (NEW)
+# -------------------------------
+def check_loan_eligibility(salary, age, existing_emi):
+    max_emi = salary * 0.4
+
+    if age < 21 or age > 60:
+        return "❌ Not eligible due to age criteria."
+
+    if existing_emi > max_emi:
+        return "❌ Not eligible due to high existing EMI."
+
+    eligible_loan = (max_emi - existing_emi) * 60
+    return f"✅ You are eligible for loan up to ₹{int(eligible_loan)}"
+
+# -------------------------------
 # Load docs (WITH SOURCE)
 # -------------------------------
 def load_documents(folder_path):
@@ -32,7 +47,7 @@ def load_documents(folder_path):
                     chunk = chunk.strip()
                     if chunk:
                         docs.append(chunk)
-                        metadata.append({"source": file})  # ✅ source added
+                        metadata.append({"source": file})
 
     return docs, metadata
 
@@ -53,7 +68,7 @@ def build_index(folder_path):
     return index, docs, metadata
 
 # -------------------------------
-# Search (TOP-K + SOURCE)
+# Search
 # -------------------------------
 def search(query, index, docs, metadata, k=2):
     query_vector = model.encode([query])
@@ -77,6 +92,12 @@ st.title("🏦 Bank Bot")
 folder_path = "bank_docs"
 index, docs, metadata = build_index(folder_path)
 
+# -------------------------------
+# Session State (NEW)
+# -------------------------------
+if "loan_step" not in st.session_state:
+    st.session_state.loan_step = 0
+
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = [
@@ -89,7 +110,7 @@ for msg in st.session_state.messages:
     st.markdown(f"**{role}:** {msg['content']}")
 
 # -------------------------------
-# ⚡ Quick Actions
+# Quick Actions
 # -------------------------------
 st.markdown("### ⚡ Quick Actions")
 
@@ -160,9 +181,41 @@ if query:
     query_lower = query.lower()
 
     # -------------------------------
+    # Loan Eligibility Flow (NEW)
+    # -------------------------------
+    if "loan eligibility" in query_lower:
+        st.session_state.loan_step = 1
+        response = "Enter your monthly salary:"
+        results = None
+
+    elif st.session_state.loan_step == 1:
+        st.session_state.salary = int(query)
+        st.session_state.loan_step = 2
+        response = "Enter your age:"
+        results = None
+
+    elif st.session_state.loan_step == 2:
+        st.session_state.age = int(query)
+        st.session_state.loan_step = 3
+        response = "Enter your existing EMI (if none, type 0):"
+        results = None
+
+    elif st.session_state.loan_step == 3:
+        existing_emi = int(query)
+
+        response = check_loan_eligibility(
+            st.session_state.salary,
+            st.session_state.age,
+            existing_emi
+        )
+
+        st.session_state.loan_step = 0
+        results = None
+
+    # -------------------------------
     # EMI logic
     # -------------------------------
-    if "emi" in query_lower:
+    elif "emi" in query_lower:
         numbers = re.findall(r"\d+", query)
 
         if len(numbers) >= 3:
@@ -219,7 +272,6 @@ if query:
     # -------------------------------
     st.markdown(f"**Bot:** {response}")
 
-    # ✅ SOURCE DISPLAY (NEW FEATURE)
     if results:
         st.markdown("📄 **Source:**")
         for res in results:
