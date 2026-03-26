@@ -41,7 +41,7 @@ def check_loan_eligibility(salary, age, existing_emi):
     return f"✅ You are eligible for loan up to ₹{int(eligible_loan)}"
 
 # -------------------------------
-# Load Documents
+# Load Documents (LINE BASED - FIXED)
 # -------------------------------
 def load_documents(folder_path):
     docs = []
@@ -50,14 +50,12 @@ def load_documents(folder_path):
     for file in os.listdir(folder_path):
         if file.endswith(".txt"):
             with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
-                text = f.read()
+                lines = f.readlines()
 
-                chunks = [text[i:i+300] for i in range(0, len(text), 300)]
-
-                for chunk in chunks:
-                    chunk = chunk.strip()
-                    if chunk:
-                        docs.append(chunk)
+                for line in lines:
+                    line = line.strip()
+                    if line:
+                        docs.append(line)
                         metadata.append({"source": file})
 
     return docs, metadata
@@ -76,34 +74,20 @@ def build_index(folder_path):
     return index, docs, metadata
 
 # -------------------------------
-# Search (IMPROVED FILTERING)
+# Search (ONLY BEST MATCH)
 # -------------------------------
-def search(query, index, docs, metadata, k=3):
+def search(query, index, docs, metadata):
     query_vector = model.encode([query])
-    distances, indices = index.search(np.array(query_vector), k)
+    distances, indices = index.search(np.array(query_vector), 1)
 
-    results = []
-    for i, idx in enumerate(indices[0]):
-        text = docs[idx]
+    if distances[0][0] > 1.2:
+        return None
 
-        # 🔥 FILTER ONLY RELEVANT LINES
-        filtered_lines = []
-        for line in text.split("\n"):
-            if any(word in line.lower() for word in query.lower().split()):
-                filtered_lines.append(line)
-
-        if filtered_lines:
-            final_text = "\n".join(filtered_lines)
-        else:
-            final_text = text
-
-        results.append({
-            "text": final_text,
-            "source": metadata[idx]["source"],
-            "score": distances[0][i]
-        })
-
-    return results
+    idx = indices[0][0]
+    return {
+        "text": docs[idx],
+        "source": metadata[idx]["source"]
+    }
 
 # -------------------------------
 # UI
@@ -185,7 +169,7 @@ if query:
 
     query_lower = query.lower()
     response = ""
-    results = None
+    result = None
 
     # -------------------------------
     # Loan Eligibility Flow
@@ -239,13 +223,13 @@ if query:
             response = "👉 Example: 500000 8 60"
 
     # -------------------------------
-    # Clean Smart Responses
+    # Smart Fixed Responses
     # -------------------------------
-    elif "fd" in query_lower:
-        response = "📈 FD Interest Rates:\n1 year - 6%\n3 years - 7%\n5 years - 7.5%"
+    elif "fd" in query_lower or "fixed deposit" in query_lower:
+        response = "📈 FD Interest Rates:\n• 1 year - 6%\n• 3 years - 7%\n• 5 years - 7.5%"
 
     elif "loan" in query_lower:
-        response = "🏦 We offer Home Loan, Personal Loan, Car Loan."
+        response = "🏦 We offer Home Loan, Personal Loan, and Car Loan."
 
     elif "atm" in query_lower:
         response = "🏧 5 free transactions per month. ₹20 per extra transaction."
@@ -260,24 +244,22 @@ if query:
         response = "📊 Savings Account, Current Account"
 
     # -------------------------------
-    # FAISS Search (CLEAN OUTPUT)
+    # FAISS Search (CLEAN)
     # -------------------------------
     else:
-        results = search(query, index, docs, metadata)
+        result = search(query, index, docs, metadata)
 
-        if results:
-            response = results[0]["text"]
+        if result:
+            response = result["text"]
         else:
-            response = "🤖 I can help with loans, EMI, FD, cards, accounts."
+            response = "🤖 I can help with loans, EMI, FD, cards, and accounts."
 
     # -------------------------------
     # Output
     # -------------------------------
     st.markdown(f"**🤖 Bot:** {response}")
 
-    if results:
-        st.markdown("📄 Sources:")
-        for r in results:
-            st.markdown(f"- {r['source']}")
+    if result:
+        st.markdown(f"📄 Source: {result['source']}")
 
     st.session_state.messages.append({"role": "assistant", "content": response})
