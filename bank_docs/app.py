@@ -16,45 +16,58 @@ def calculate_emi(P, annual_rate, months):
     return round(emi, 2)
 
 # -------------------------------
-# Load docs
+# Load docs (WITH SOURCE)
 # -------------------------------
 def load_documents(folder_path):
     docs = []
+    metadata = []
+
     for file in os.listdir(folder_path):
         if file.endswith(".txt"):
             with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
                 text = f.read()
                 chunks = text.split("\n\n")
+
                 for chunk in chunks:
                     chunk = chunk.strip()
                     if chunk:
                         docs.append(chunk)
-    return docs
+                        metadata.append({"source": file})  # ✅ source added
+
+    return docs, metadata
 
 # -------------------------------
 # Build index
 # -------------------------------
 def build_index(folder_path):
-    docs = load_documents(folder_path)
+    docs, metadata = load_documents(folder_path)
+
     if len(docs) == 0:
         st.error("No documents found")
         st.stop()
+
     embeddings = model.encode(docs)
     index = faiss.IndexFlatL2(embeddings.shape[1])
     index.add(np.array(embeddings))
-    return index, docs
+
+    return index, docs, metadata
 
 # -------------------------------
-# Search
+# Search (TOP-K + SOURCE)
 # -------------------------------
-def search(query, index, docs, k=2):
+def search(query, index, docs, metadata, k=2):
     query_vector = model.encode([query])
     distances, indices = index.search(np.array(query_vector), k)
-    best_distance = distances[0][0]
-    best_doc = docs[indices[0][0]]
-    if best_distance > 1.2:
-        return None
-    return best_doc
+
+    results = []
+    for i, idx in enumerate(indices[0]):
+        if distances[0][i] < 1.2:
+            results.append({
+                "text": docs[idx],
+                "source": metadata[idx]["source"]
+            })
+
+    return results if results else None
 
 # -------------------------------
 # UI
@@ -62,7 +75,7 @@ def search(query, index, docs, k=2):
 st.title("🏦 Bank Bot")
 
 folder_path = "bank_docs"
-index, docs = build_index(folder_path)
+index, docs, metadata = build_index(folder_path)
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -82,7 +95,6 @@ st.markdown("### ⚡ Quick Actions")
 
 quick_query = None
 
-# Row 1
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
@@ -101,7 +113,6 @@ with col4:
     if st.button("🏧 ATM"):
         quick_query = "atm charges"
 
-# Row 2
 col5, col6, col7 = st.columns(3)
 
 with col5:
@@ -118,7 +129,7 @@ with col7:
         quick_query = "account types"
 
 # -------------------------------
-# Balance Sub Buttons (NEW)
+# Balance Options
 # -------------------------------
 if "show_balance_options" not in st.session_state:
     st.session_state.show_balance_options = False
@@ -159,55 +170,41 @@ if query:
             rate = float(numbers[1])
             months = int(numbers[2])
             response = f"💰 Your EMI is ₹{calculate_emi(P, rate, months)}"
+            results = None
         else:
             st.subheader("💰 EMI Calculator")
 
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                amount = st.number_input("Loan Amount", value=500000, key="emi_amount")
+                amount = st.number_input("Loan Amount", value=500000)
 
             with col2:
-                rate = st.number_input("Interest Rate (%)", value=8.0, key="emi_rate")
+                rate = st.number_input("Interest Rate (%)", value=8.0)
 
             with col3:
-                months = st.number_input("Tenure (Months)", value=60, key="emi_months")
+                months = st.number_input("Tenure (Months)", value=60)
 
-            if st.button("Calculate EMI", key="emi_calc_btn"):
+            if st.button("Calculate EMI"):
                 response = f"💰 Your EMI is ₹{calculate_emi(amount, rate, months)}"
             else:
-                response = "Please enter loan details to calculate EMI."
+                response = "Please enter loan details."
+            results = None
 
     # -------------------------------
-    # Bank search logic
+    # Search logic
     # -------------------------------
     else:
-        result = search(query, index, docs)
+        results = search(query, index, docs, metadata)
 
-        if result:
+        if results:
+            result = results[0]["text"]
+
             if "savings" in query_lower and "balance" in query_lower:
                 response = "💰 Savings Account Minimum Balance: ₹1000"
 
             elif "current" in query_lower and "balance" in query_lower:
                 response = "💰 Current Account Minimum Balance: ₹5000"
-
-            elif "home" in query_lower and "loan" in query_lower:
-                response = next((line for line in result.split("\n") if "Home Loan" in line), result)
-
-            elif "personal" in query_lower and "loan" in query_lower:
-                response = next((line for line in result.split("\n") if "Personal Loan" in line), result)
-
-            elif "credit" in query_lower:
-                response = "\n".join([line for line in result.split("\n") if "credit" in line.lower()])
-
-            elif "atm" in query_lower:
-                response = "\n".join([line for line in result.split("\n") if "atm" in line.lower() or "transaction" in line.lower()])
-
-            elif "minimum balance" in query_lower:
-                response = "👉 Please select Savings or Current account"
-
-            elif "fd" in query_lower or "fixed deposit" in query_lower:
-                response = "\n".join([line for line in result.split("\n") if "year" in line.lower() or "interest" in line.lower()])
 
             elif "account types" in query_lower:
                 response = "💳 Savings Account, Current Account"
@@ -221,4 +218,11 @@ if query:
     # Show response
     # -------------------------------
     st.markdown(f"**Bot:** {response}")
+
+    # ✅ SOURCE DISPLAY (NEW FEATURE)
+    if results:
+        st.markdown("📄 **Source:**")
+        for res in results:
+            st.markdown(f"- {res['source']}")
+
     st.session_state.messages.append({"role": "assistant", "content": response})
