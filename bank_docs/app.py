@@ -26,7 +26,22 @@ def calculate_emi(P, annual_rate, months):
         return "Invalid input"
 
 # -------------------------------
-# Load Documents (Better Chunking)
+# Loan Eligibility Function
+# -------------------------------
+def check_loan_eligibility(salary, age, existing_emi):
+    max_emi = salary * 0.4
+
+    if age < 21 or age > 60:
+        return "❌ Not eligible due to age criteria."
+
+    if existing_emi > max_emi:
+        return "❌ Not eligible due to high existing EMI."
+
+    eligible_loan = (max_emi - existing_emi) * 60
+    return f"✅ You are eligible for loan up to ₹{int(eligible_loan)}"
+
+# -------------------------------
+# Load Documents
 # -------------------------------
 def load_documents(folder_path):
     docs = []
@@ -37,7 +52,6 @@ def load_documents(folder_path):
             with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
                 text = f.read()
 
-                # 🔥 Better chunking
                 chunks = [text[i:i+300] for i in range(0, len(text), 300)]
 
                 for chunk in chunks:
@@ -55,10 +69,6 @@ def load_documents(folder_path):
 def build_index(folder_path):
     docs, metadata = load_documents(folder_path)
 
-    if len(docs) == 0:
-        st.error("No documents found")
-        st.stop()
-
     embeddings = model.encode(docs)
     index = faiss.IndexFlatL2(embeddings.shape[1])
     index.add(np.array(embeddings))
@@ -66,14 +76,11 @@ def build_index(folder_path):
     return index, docs, metadata
 
 # -------------------------------
-# Search Function (Top-K + Source)
+# Search
 # -------------------------------
-def search(query, index, docs, metadata, k=2):
+def search(query, index, docs, metadata, k=3):
     query_vector = model.encode([query])
     distances, indices = index.search(np.array(query_vector), k)
-
-    if distances[0][0] > 1.2:
-        return None
 
     results = []
     for i, idx in enumerate(indices[0]):
@@ -88,22 +95,28 @@ def search(query, index, docs, metadata, k=2):
 # -------------------------------
 # UI
 # -------------------------------
-st.set_page_config(page_title="Bank Bot", page_icon="🏦")
+st.set_page_config(page_title="AI Bank Assistant", page_icon="🏦")
 
 st.title("🏦 AI Bank Assistant")
-st.markdown("💬 Ask about loans, EMI, cards, accounts, FD and more!")
+st.markdown("💬 Ask about loans, EMI, FD, cards, accounts and more!")
 
 folder_path = "bank_docs"
 index, docs, metadata = build_index(folder_path)
 
 # -------------------------------
-# Chat History
+# Session State
 # -------------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "👋 Welcome! How can I assist you today?"}
     ]
 
+if "loan_step" not in st.session_state:
+    st.session_state.loan_step = 0
+
+# -------------------------------
+# Chat History
+# -------------------------------
 for msg in st.session_state.messages:
     role = "🧑 You" if msg["role"] == "user" else "🤖 Bot"
     st.markdown(f"**{role}:** {msg['content']}")
@@ -137,37 +150,18 @@ col5, col6, col7 = st.columns(3)
 
 with col5:
     if st.button("💵 Balance"):
-        st.session_state.show_balance_options = True
+        quick_query = "minimum balance"
 
 with col6:
     if st.button("📈 FD"):
-        quick_query = "fd interest"
+        quick_query = "fixed deposit interest"
 
 with col7:
     if st.button("📊 Accounts"):
         quick_query = "account types"
 
 # -------------------------------
-# Balance Options
-# -------------------------------
-if "show_balance_options" not in st.session_state:
-    st.session_state.show_balance_options = False
-
-if st.session_state.show_balance_options:
-    st.markdown("### 💵 Select Account Type")
-
-    colA, colB = st.columns(2)
-
-    if colA.button("Savings Account"):
-        quick_query = "savings minimum balance"
-        st.session_state.show_balance_options = False
-
-    if colB.button("Current Account"):
-        quick_query = "current minimum balance"
-        st.session_state.show_balance_options = False
-
-# -------------------------------
-# User Input
+# Input
 # -------------------------------
 query_input = st.text_input("Ask your question...")
 query = quick_query if quick_query else query_input
@@ -181,56 +175,96 @@ if query:
     results = None
 
     # -------------------------------
-    # EMI Logic
+    # Loan Eligibility Flow
     # -------------------------------
-    if "emi" in query_lower:
+    if st.session_state.loan_step > 0 or "loan eligibility" in query_lower:
+
+        if st.session_state.loan_step == 0:
+            st.session_state.loan_step = 1
+            response = "💰 Enter your monthly salary:"
+
+        elif st.session_state.loan_step == 1:
+            try:
+                st.session_state.salary = int(query)
+                st.session_state.loan_step = 2
+                response = "🎂 Enter your age:"
+            except:
+                response = "❗ Enter valid salary"
+
+        elif st.session_state.loan_step == 2:
+            try:
+                st.session_state.age = int(query)
+                st.session_state.loan_step = 3
+                response = "💳 Enter existing EMI (0 if none):"
+            except:
+                response = "❗ Enter valid age"
+
+        elif st.session_state.loan_step == 3:
+            try:
+                emi = int(query)
+                response = check_loan_eligibility(
+                    st.session_state.salary,
+                    st.session_state.age,
+                    emi
+                )
+                st.session_state.loan_step = 0
+            except:
+                response = "❗ Enter valid EMI"
+
+    # -------------------------------
+    # EMI
+    # -------------------------------
+    elif "emi" in query_lower:
         numbers = re.findall(r"\d+", query)
 
         if len(numbers) >= 3:
-            try:
-                P = int(numbers[0])
-                rate = float(numbers[1])
-                months = int(numbers[2])
-
-                emi = calculate_emi(P, rate, months)
-                response = f"💰 **Your EMI is ₹{emi}**"
-            except:
-                response = "❗ Please enter valid values (amount rate months)"
+            P = int(numbers[0])
+            rate = float(numbers[1])
+            months = int(numbers[2])
+            response = f"💰 Your EMI is ₹{calculate_emi(P, rate, months)}"
         else:
             response = "👉 Example: 500000 8 60"
 
     # -------------------------------
-    # Search Logic
+    # Smart Responses (fallback)
+    # -------------------------------
+    elif "fd" in query_lower:
+        response = "📈 FD interest ranges from 6% - 7.5% depending on tenure."
+
+    elif "loan" in query_lower:
+        response = "🏦 We offer Home Loan, Personal Loan, Car Loan."
+
+    elif "atm" in query_lower:
+        response = "🏧 5 free transactions per month, then charges apply."
+
+    elif "credit" in query_lower:
+        response = "💳 We offer cashback, rewards and travel credit cards."
+
+    elif "balance" in query_lower:
+        response = "💵 Savings: ₹1000 | Current: ₹5000"
+
+    elif "account" in query_lower:
+        response = "📊 Savings Account, Current Account"
+
+    # -------------------------------
+    # FAISS Search
     # -------------------------------
     else:
         results = search(query, index, docs, metadata)
 
         if results:
-            result = results[0]["text"]
-
-            if "savings" in query_lower and "balance" in query_lower:
-                response = "💰 **Savings Account Minimum Balance: ₹1000**"
-
-            elif "current" in query_lower and "balance" in query_lower:
-                response = "💰 **Current Account Minimum Balance: ₹5000**"
-
-            elif "account types" in query_lower:
-                response = "💳 **Savings Account, Current Account**"
-
-            else:
-                response = result
+            response = results[0]["text"]
         else:
-            response = "❗ Please ask a more specific banking question."
+            response = "🤖 I can help with loans, EMI, FD, cards, accounts. Try asking those!"
 
     # -------------------------------
     # Output
     # -------------------------------
     st.markdown(f"**🤖 Bot:** {response}")
 
-    # ✅ Source Display (PRO FEATURE)
     if results:
-        st.markdown("📄 **Sources:**")
-        for res in results:
-            st.markdown(f"- {res['source']}")
+        st.markdown("📄 Sources:")
+        for r in results:
+            st.markdown(f"- {r['source']}")
 
     st.session_state.messages.append({"role": "assistant", "content": response})
