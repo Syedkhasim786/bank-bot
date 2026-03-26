@@ -76,7 +76,7 @@ def build_index(folder_path):
     return index, docs, metadata
 
 # -------------------------------
-# Search
+# Search (IMPROVED FILTERING)
 # -------------------------------
 def search(query, index, docs, metadata, k=3):
     query_vector = model.encode([query])
@@ -84,8 +84,21 @@ def search(query, index, docs, metadata, k=3):
 
     results = []
     for i, idx in enumerate(indices[0]):
+        text = docs[idx]
+
+        # 🔥 FILTER ONLY RELEVANT LINES
+        filtered_lines = []
+        for line in text.split("\n"):
+            if any(word in line.lower() for word in query.lower().split()):
+                filtered_lines.append(line)
+
+        if filtered_lines:
+            final_text = "\n".join(filtered_lines)
+        else:
+            final_text = text
+
         results.append({
-            "text": docs[idx],
+            "text": final_text,
             "source": metadata[idx]["source"],
             "score": distances[0][i]
         })
@@ -226,19 +239,19 @@ if query:
             response = "👉 Example: 500000 8 60"
 
     # -------------------------------
-    # Smart Responses (fallback)
+    # Clean Smart Responses
     # -------------------------------
     elif "fd" in query_lower:
-        response = "📈 FD interest ranges from 6% - 7.5% depending on tenure."
+        response = "📈 FD Interest Rates:\n1 year - 6%\n3 years - 7%\n5 years - 7.5%"
 
     elif "loan" in query_lower:
         response = "🏦 We offer Home Loan, Personal Loan, Car Loan."
 
     elif "atm" in query_lower:
-        response = "🏧 5 free transactions per month, then charges apply."
+        response = "🏧 5 free transactions per month. ₹20 per extra transaction."
 
     elif "credit" in query_lower:
-        response = "💳 We offer cashback, rewards and travel credit cards."
+        response = "💳 Cashback, Rewards, and Travel Credit Cards available."
 
     elif "balance" in query_lower:
         response = "💵 Savings: ₹1000 | Current: ₹5000"
@@ -247,7 +260,7 @@ if query:
         response = "📊 Savings Account, Current Account"
 
     # -------------------------------
-    # FAISS Search
+    # FAISS Search (CLEAN OUTPUT)
     # -------------------------------
     else:
         results = search(query, index, docs, metadata)
@@ -255,7 +268,7 @@ if query:
         if results:
             response = results[0]["text"]
         else:
-            response = "🤖 I can help with loans, EMI, FD, cards, accounts. Try asking those!"
+            response = "🤖 I can help with loans, EMI, FD, cards, accounts."
 
     # -------------------------------
     # Output
