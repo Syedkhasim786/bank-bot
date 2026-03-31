@@ -48,6 +48,9 @@ def check_loan_eligibility(salary, age, existing_emi):
 def load_documents(folder_path):
     docs, metadata = [], []
 
+    if not os.path.exists(folder_path):
+        return docs, metadata
+
     for file in os.listdir(folder_path):
         if file.endswith(".txt"):
             with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
@@ -60,11 +63,15 @@ def load_documents(folder_path):
     return docs, metadata
 
 # -------------------------------
-# Build Index
+# Build Index (SAFE)
 # -------------------------------
 @st.cache_resource
 def build_index(folder_path):
     docs, metadata = load_documents(folder_path)
+
+    if len(docs) == 0:
+        return None, [], []
+
     embeddings = model.encode(docs)
 
     index = faiss.IndexFlatL2(embeddings.shape[1])
@@ -73,9 +80,12 @@ def build_index(folder_path):
     return index, docs, metadata
 
 # -------------------------------
-# Search
+# Search (SAFE)
 # -------------------------------
 def search(query, index, docs, metadata):
+    if index is None or len(docs) == 0:
+        return None
+
     query_vector = model.encode([query])
     distances, indices = index.search(np.array(query_vector), 1)
 
@@ -107,7 +117,6 @@ if "messages" not in st.session_state:
 if "loan_mode" not in st.session_state:
     st.session_state.loan_mode = False
 
-# ✅ NEW EMI MODE
 if "emi_mode" not in st.session_state:
     st.session_state.emi_mode = False
 
@@ -129,7 +138,7 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     if st.button("💰 EMI"):
-        st.session_state.emi_mode = True   # ✅ FIXED
+        st.session_state.emi_mode = True
 
 with col2:
     if st.button("🏦 Loans"):
@@ -158,7 +167,7 @@ with col7:
         quick_query = "account types"
 
 # -------------------------------
-# ✅ EMI CALCULATOR UI
+# EMI CALCULATOR UI
 # -------------------------------
 if st.session_state.emi_mode:
     st.markdown("### 💰 EMI Calculator")
@@ -167,7 +176,7 @@ if st.session_state.emi_mode:
     rate = st.number_input("📊 Interest Rate (%)", min_value=0.0)
     months = st.number_input("📅 Tenure (months)", min_value=1)
 
-    if st.button("Calculate EMI"):
+    if st.button("Calculate EMI", key="emi_btn"):
         emi_value = calculate_emi(P, rate, months)
         st.success(f"💰 Your EMI is ₹{emi_value}")
 
@@ -187,16 +196,11 @@ if query:
     response = ""
     result = None
 
-    # -------------------------------
     # Loan Eligibility
-    # -------------------------------
     if "loan eligibility" in query_lower:
         st.session_state.loan_mode = True
         response = "📋 Fill the form below 👇"
 
-    # -------------------------------
-    # Show Loan Form
-    # -------------------------------
     if st.session_state.loan_mode:
         st.markdown("### 🏦 Loan Eligibility Form")
 
@@ -204,19 +208,10 @@ if query:
         age = st.number_input("🎂 Age", min_value=18, max_value=100)
         emi_existing = st.number_input("💳 Existing EMI (₹)", min_value=0, step=500)
 
-        if st.button("Check Eligibility"):
-            if salary <= 0:
-                response = "❗ Enter valid salary"
-            elif age < 21 or age > 60:
-                response = "❌ Age must be between 21 and 60"
-            else:
-                response = check_loan_eligibility(salary, age, emi_existing)
-
+        if st.button("Check Eligibility", key="loan_btn"):
+            response = check_loan_eligibility(salary, age, emi_existing)
             st.session_state.loan_mode = False
 
-    # -------------------------------
-    # Fixed Responses
-    # -------------------------------
     elif "fd" in query_lower:
         response = "📈 FD Interest Rates:\n• 1 year - 6%\n• 3 years - 7%\n• 5 years - 7.5%"
 
@@ -235,9 +230,6 @@ if query:
     elif "account" in query_lower:
         response = "📊 Savings & Current Accounts available."
 
-    # -------------------------------
-    # FAISS Search
-    # -------------------------------
     else:
         result = search(query, index, docs, metadata)
 
@@ -246,9 +238,6 @@ if query:
         else:
             response = "🤖 I can help with loans, EMI, FD, cards, and accounts."
 
-    # -------------------------------
-    # Output
-    # -------------------------------
     st.markdown(f"**🤖 Bot:** {response}")
 
     if result:
