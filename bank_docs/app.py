@@ -225,7 +225,10 @@ if query:
         response = "📈 FD Interest Rates:\n• 1 year - 6%\n• 3 years - 7%\n• 5 years - 7.5%"
 
     elif "loan" in query_lower:
-        response = "🏦 We offer Home Loan, Personal Loan, and Car Loan."
+        response = "🏦 We offer Home Loan, Personal Loan, and Car Loan.\n\n👉 Click below to check your loan eligibility."
+
+        if st.button("Check Loan Eligibility", key="loan_check_btn"):
+            st.session_state.loan_mode = True
 
     elif "atm" in query_lower:
         response = "🏧 5 free transactions per month. ₹20 extra."
