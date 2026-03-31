@@ -1,4 +1,4 @@
-
+```python
 import streamlit as st
 import os
 import faiss
@@ -133,9 +133,12 @@ if "emi_mode" not in st.session_state:
 if "emi_result" not in st.session_state:
     st.session_state.emi_result = None
 
-# ✅ NEW ATM STATE
 if "atm_mode" not in st.session_state:
     st.session_state.atm_mode = False
+
+# ✅ FIX STATE
+if "show_atm_calc" not in st.session_state:
+    st.session_state.show_atm_calc = False
 
 # -------------------------------
 # Chat History
@@ -165,7 +168,6 @@ with col3:
     if st.button("💳 Cards"):
         quick_query = "credit card details"
 
-# ✅ UPDATED ATM BUTTON
 with col4:
     if st.button("🏧 ATM"):
         st.session_state.atm_mode = True
@@ -225,7 +227,6 @@ if query:
     elif "fd" in query_lower:
         response = "📈 FD Rates:\n• 1yr: 6%\n• 3yr: 7%\n• 5yr: 7.5%"
 
-    # ✅ UPDATED ATM RESPONSE
     elif "atm" in query_lower:
         response = "🏧 Showing ATM services below 👇"
         st.session_state.atm_mode = True
@@ -275,7 +276,7 @@ if st.session_state.loan_mode:
         st.session_state.loan_mode = False
 
 # -------------------------------
-# ✅ ATM FEATURE (FINAL)
+# ✅ ATM FEATURE (FINAL FIXED)
 # -------------------------------
 if st.session_state.atm_mode:
     st.markdown("### 🏧 ATM Services")
@@ -284,12 +285,15 @@ if st.session_state.atm_mode:
     st.write("• 5 free transactions/month")
     st.write("• ₹20 per extra transaction")
 
-    if st.button("💰 Check Charges"):
+    if st.button("💰 Check Charges", key="atm_btn"):
+        st.session_state.show_atm_calc = True
 
+    if st.session_state.show_atm_calc:
         transactions = st.number_input(
             "Enter number of transactions:",
             min_value=0,
-            step=1
+            step=1,
+            key="atm_input"
         )
 
         free_limit = 5
@@ -303,4 +307,4 @@ if st.session_state.atm_mode:
 
             st.warning(f"⚠️ Charges: ₹{total}")
             st.write(f"Extra Transactions: {extra}")
-
+```
