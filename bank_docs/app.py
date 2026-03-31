@@ -1,4 +1,4 @@
-```python
+
 import streamlit as st
 import os
 import faiss
@@ -303,4 +303,4 @@ if st.session_state.atm_mode:
 
             st.warning(f"⚠️ Charges: ₹{total}")
             st.write(f"Extra Transactions: {extra}")
-```
+
