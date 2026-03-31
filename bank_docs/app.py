@@ -123,6 +123,9 @@ if "messages" not in st.session_state:
 if "loan_mode" not in st.session_state:
     st.session_state.loan_mode = False
 
+if "show_loan_button" not in st.session_state:
+    st.session_state.show_loan_button = False
+
 if "emi_mode" not in st.session_state:
     st.session_state.emi_mode = False
 
@@ -176,7 +179,7 @@ with col7:
         quick_query = "account types"
 
 # -------------------------------
-# EMI CALCULATOR UI
+# EMI CALCULATOR
 # -------------------------------
 if st.session_state.emi_mode:
     st.markdown("### 💰 EMI Calculator")
@@ -186,14 +189,13 @@ if st.session_state.emi_mode:
     months = st.number_input("📅 Tenure (months)", min_value=1)
 
     if st.button("Calculate EMI", key="emi_btn"):
-        emi_value = calculate_emi(P, rate, months)
-        st.session_state.emi_result = emi_value
+        st.session_state.emi_result = calculate_emi(P, rate, months)
 
     if st.session_state.emi_result is not None:
         st.success(f"💰 Your EMI is ₹{st.session_state.emi_result}")
 
 # -------------------------------
-# Input
+# INPUT
 # -------------------------------
 query_input = st.text_input("Ask your question...")
 query = quick_query if quick_query else query_input
@@ -210,25 +212,12 @@ if query:
         st.session_state.loan_mode = True
         response = "📋 Fill the form below 👇"
 
-    if st.session_state.loan_mode:
-        st.markdown("### 🏦 Loan Eligibility Form")
-
-        salary = st.number_input("💰 Monthly Salary (₹)", min_value=0, step=1000)
-        age = st.number_input("🎂 Age", min_value=18, max_value=100)
-        emi_existing = st.number_input("💳 Existing EMI (₹)", min_value=0, step=500)
-
-        if st.button("Check Eligibility", key="loan_btn"):
-            response = check_loan_eligibility(salary, age, emi_existing)
-            st.session_state.loan_mode = False
+    elif "loan" in query_lower:
+        response = "🏦 We offer Home Loan, Personal Loan, and Car Loan."
+        st.session_state.show_loan_button = True
 
     elif "fd" in query_lower:
         response = "📈 FD Interest Rates:\n• 1 year - 6%\n• 3 years - 7%\n• 5 years - 7.5%"
-
-    elif "loan" in query_lower:
-        response = "🏦 We offer Home Loan, Personal Loan, and Car Loan.\n\n👉 Click below to check your loan eligibility."
-
-        if st.button("Check Loan Eligibility", key="loan_check_btn"):
-            st.session_state.loan_mode = True
 
     elif "atm" in query_lower:
         response = "🏧 5 free transactions per month. ₹20 extra."
@@ -252,7 +241,30 @@ if query:
 
     st.markdown(f"**🤖 Bot:** {response}")
 
-    if result:
-        st.markdown(f"📄 Source: {result['source']}")
-
     st.session_state.messages.append({"role": "assistant", "content": response})
+
+# -------------------------------
+# SAFE LOAN BUTTON (OUTSIDE CHAT)
+# -------------------------------
+if st.session_state.show_loan_button:
+    st.markdown("👉 Click below to check your loan eligibility")
+
+    if st.button("Check Loan Eligibility", key="loan_check_btn"):
+        st.session_state.loan_mode = True
+        st.session_state.show_loan_button = False
+        st.rerun()
+
+# -------------------------------
+# LOAN FORM
+# -------------------------------
+if st.session_state.loan_mode:
+    st.markdown("### 🏦 Loan Eligibility Form")
+
+    salary = st.number_input("💰 Monthly Salary (₹)", min_value=0, step=1000)
+    age = st.number_input("🎂 Age", min_value=18, max_value=100)
+    emi_existing = st.number_input("💳 Existing EMI (₹)", min_value=0, step=500)
+
+    if st.button("Check Eligibility", key="loan_btn"):
+        result = check_loan_eligibility(salary, age, emi_existing)
+        st.success(result)
+        st.session_state.loan_mode = False
