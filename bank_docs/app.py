@@ -33,8 +33,14 @@ def calculate_emi(P, annual_rate, months):
 def check_loan_eligibility(salary, age, existing_emi):
     max_emi = salary * 0.4
 
-    if age < 21 or age > 60:
-        return "❌ Not eligible due to age criteria."
+    if age < 18:
+        return "❌ You must be at least 18 years old."
+
+    if 18 <= age < 21:
+        return "⚠️ You are legally eligible, but most banks require minimum age of 21 for loans."
+
+    if age > 60:
+        return "❌ Not eligible due to age criteria (above 60)."
 
     if existing_emi > max_emi:
         return "❌ Not eligible due to high existing EMI."
@@ -63,7 +69,7 @@ def load_documents(folder_path):
     return docs, metadata
 
 # -------------------------------
-# Build Index (SAFE)
+# Build Index
 # -------------------------------
 @st.cache_resource
 def build_index(folder_path):
@@ -80,7 +86,7 @@ def build_index(folder_path):
     return index, docs, metadata
 
 # -------------------------------
-# Search (SAFE)
+# Search
 # -------------------------------
 def search(query, index, docs, metadata):
     if index is None or len(docs) == 0:
@@ -119,6 +125,9 @@ if "loan_mode" not in st.session_state:
 
 if "emi_mode" not in st.session_state:
     st.session_state.emi_mode = False
+
+if "emi_result" not in st.session_state:
+    st.session_state.emi_result = None
 
 # -------------------------------
 # Chat History
@@ -178,9 +187,10 @@ if st.session_state.emi_mode:
 
     if st.button("Calculate EMI", key="emi_btn"):
         emi_value = calculate_emi(P, rate, months)
-        st.success(f"💰 Your EMI is ₹{emi_value}")
+        st.session_state.emi_result = emi_value
 
-        st.session_state.emi_mode = False
+    if st.session_state.emi_result is not None:
+        st.success(f"💰 Your EMI is ₹{st.session_state.emi_result}")
 
 # -------------------------------
 # Input
@@ -196,7 +206,6 @@ if query:
     response = ""
     result = None
 
-    # Loan Eligibility
     if "loan eligibility" in query_lower:
         st.session_state.loan_mode = True
         response = "📋 Fill the form below 👇"
