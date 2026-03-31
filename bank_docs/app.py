@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 import os
 import faiss
@@ -37,16 +38,16 @@ def check_loan_eligibility(salary, age, existing_emi):
         return "❌ You must be at least 18 years old."
 
     if 18 <= age < 21:
-        return "⚠️ You are legally eligible, but most banks require minimum age of 21 for loans."
+        return "⚠️ Banks usually require minimum age of 21."
 
     if age > 60:
-        return "❌ Not eligible due to age criteria (above 60)."
+        return "❌ Not eligible due to age criteria."
 
     if existing_emi > max_emi:
         return "❌ Not eligible due to high existing EMI."
 
     eligible_loan = (max_emi - existing_emi) * 60
-    return f"✅ You are eligible for loan up to ₹{int(eligible_loan)}"
+    return f"✅ Eligible loan amount: ₹{int(eligible_loan)}"
 
 # -------------------------------
 # Load Docs
@@ -132,6 +133,10 @@ if "emi_mode" not in st.session_state:
 if "emi_result" not in st.session_state:
     st.session_state.emi_result = None
 
+# ✅ NEW ATM STATE
+if "atm_mode" not in st.session_state:
+    st.session_state.atm_mode = False
+
 # -------------------------------
 # Chat History
 # -------------------------------
@@ -160,9 +165,10 @@ with col3:
     if st.button("💳 Cards"):
         quick_query = "credit card details"
 
+# ✅ UPDATED ATM BUTTON
 with col4:
     if st.button("🏧 ATM"):
-        quick_query = "atm charges"
+        st.session_state.atm_mode = True
 
 col5, col6, col7 = st.columns(3)
 
@@ -213,17 +219,19 @@ if query:
         response = "📋 Fill the form below 👇"
 
     elif "loan" in query_lower:
-        response = "🏦 We offer Home Loan, Personal Loan, and Car Loan."
+        response = "🏦 We offer Home, Personal & Car Loans."
         st.session_state.show_loan_button = True
 
     elif "fd" in query_lower:
-        response = "📈 FD Interest Rates:\n• 1 year - 6%\n• 3 years - 7%\n• 5 years - 7.5%"
+        response = "📈 FD Rates:\n• 1yr: 6%\n• 3yr: 7%\n• 5yr: 7.5%"
 
+    # ✅ UPDATED ATM RESPONSE
     elif "atm" in query_lower:
-        response = "🏧 5 free transactions per month. ₹20 extra."
+        response = "🏧 Showing ATM services below 👇"
+        st.session_state.atm_mode = True
 
     elif "credit" in query_lower:
-        response = "💳 Cashback & Travel Credit Cards available."
+        response = "💳 Cashback & Travel Cards available."
 
     elif "balance" in query_lower:
         response = "💵 Savings: ₹1000 | Current: ₹5000"
@@ -237,19 +245,16 @@ if query:
         if result:
             response = result["text"]
         else:
-            response = "🤖 I can help with loans, EMI, FD, cards, and accounts."
+            response = "🤖 Ask me about loans, EMI, ATM, FD, cards."
 
     st.markdown(f"**🤖 Bot:** {response}")
-
     st.session_state.messages.append({"role": "assistant", "content": response})
 
 # -------------------------------
-# SAFE LOAN BUTTON (OUTSIDE CHAT)
+# LOAN BUTTON
 # -------------------------------
 if st.session_state.show_loan_button:
-    st.markdown("👉 Click below to check your loan eligibility")
-
-    if st.button("Check Loan Eligibility", key="loan_check_btn"):
+    if st.button("Check Loan Eligibility"):
         st.session_state.loan_mode = True
         st.session_state.show_loan_button = False
         st.rerun()
@@ -260,11 +265,42 @@ if st.session_state.show_loan_button:
 if st.session_state.loan_mode:
     st.markdown("### 🏦 Loan Eligibility Form")
 
-    salary = st.number_input("💰 Monthly Salary (₹)", min_value=0, step=1000)
+    salary = st.number_input("💰 Salary", min_value=0)
     age = st.number_input("🎂 Age", min_value=18, max_value=100)
-    emi_existing = st.number_input("💳 Existing EMI (₹)", min_value=0, step=500)
+    emi_existing = st.number_input("💳 Existing EMI", min_value=0)
 
-    if st.button("Check Eligibility", key="loan_btn"):
+    if st.button("Check Eligibility"):
         result = check_loan_eligibility(salary, age, emi_existing)
         st.success(result)
         st.session_state.loan_mode = False
+
+# -------------------------------
+# ✅ ATM FEATURE (FINAL)
+# -------------------------------
+if st.session_state.atm_mode:
+    st.markdown("### 🏧 ATM Services")
+
+    st.info("📍 ATM Info")
+    st.write("• 5 free transactions/month")
+    st.write("• ₹20 per extra transaction")
+
+    if st.button("💰 Check Charges"):
+
+        transactions = st.number_input(
+            "Enter number of transactions:",
+            min_value=0,
+            step=1
+        )
+
+        free_limit = 5
+        charge = 20
+
+        if transactions <= free_limit:
+            st.success("✅ No charges")
+        else:
+            extra = transactions - free_limit
+            total = extra * charge
+
+            st.warning(f"⚠️ Charges: ₹{total}")
+            st.write(f"Extra Transactions: {extra}")
+```
