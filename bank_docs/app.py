@@ -2,7 +2,6 @@ import streamlit as st
 import os
 import faiss
 import numpy as np
-import re
 from sentence_transformers import SentenceTransformer
 
 # -------------------------------
@@ -19,6 +18,9 @@ model = load_model()
 # -------------------------------
 def calculate_emi(P, annual_rate, months):
     try:
+        if annual_rate == 0:
+            return round(P / months, 2)
+
         r = annual_rate / (12 * 100)
         emi = (P * r * (1 + r)**months) / ((1 + r)**months - 1)
         return round(emi, 2)
@@ -105,6 +107,10 @@ if "messages" not in st.session_state:
 if "loan_mode" not in st.session_state:
     st.session_state.loan_mode = False
 
+# ✅ NEW EMI MODE
+if "emi_mode" not in st.session_state:
+    st.session_state.emi_mode = False
+
 # -------------------------------
 # Chat History
 # -------------------------------
@@ -123,7 +129,7 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     if st.button("💰 EMI"):
-        quick_query = "calculate emi"
+        st.session_state.emi_mode = True   # ✅ FIXED
 
 with col2:
     if st.button("🏦 Loans"):
@@ -152,6 +158,22 @@ with col7:
         quick_query = "account types"
 
 # -------------------------------
+# ✅ EMI CALCULATOR UI
+# -------------------------------
+if st.session_state.emi_mode:
+    st.markdown("### 💰 EMI Calculator")
+
+    P = st.number_input("💵 Loan Amount (₹)", min_value=0)
+    rate = st.number_input("📊 Interest Rate (%)", min_value=0.0)
+    months = st.number_input("📅 Tenure (months)", min_value=1)
+
+    if st.button("Calculate EMI"):
+        emi_value = calculate_emi(P, rate, months)
+        st.success(f"💰 Your EMI is ₹{emi_value}")
+
+        st.session_state.emi_mode = False
+
+# -------------------------------
 # Input
 # -------------------------------
 query_input = st.text_input("Ask your question...")
@@ -166,14 +188,14 @@ if query:
     result = None
 
     # -------------------------------
-    # NEW LOAN FORM (FIXED)
+    # Loan Eligibility
     # -------------------------------
     if "loan eligibility" in query_lower:
         st.session_state.loan_mode = True
         response = "📋 Fill the form below 👇"
 
     # -------------------------------
-    # SHOW FORM
+    # Show Loan Form
     # -------------------------------
     if st.session_state.loan_mode:
         st.markdown("### 🏦 Loan Eligibility Form")
@@ -191,18 +213,6 @@ if query:
                 response = check_loan_eligibility(salary, age, emi_existing)
 
             st.session_state.loan_mode = False
-
-    # -------------------------------
-    # EMI
-    # -------------------------------
-    elif "emi" in query_lower:
-        numbers = re.findall(r"\d+", query)
-
-        if len(numbers) >= 3:
-            P, rate, months = int(numbers[0]), float(numbers[1]), int(numbers[2])
-            response = f"💰 Your EMI is ₹{calculate_emi(P, rate, months)}"
-        else:
-            response = "👉 Example: 500000 8 60"
 
     # -------------------------------
     # Fixed Responses
